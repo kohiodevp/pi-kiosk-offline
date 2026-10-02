@@ -1,0 +1,41 @@
+[Unit]
+Description=Kiosque hors-ligne (synchro contenu et navigateur plein ecran)
+Documentation=file:///opt/pi-kiosk/README.md
+After=network-online.target docker.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=kiosk
+Group=kiosk
+WorkingDirectory=/opt/pi-kiosk
+EnvironmentFile=-/opt/pi-kiosk/.env
+
+# Synchronisation bloquante avant ouverture du navigateur.
+ExecStartPre=/usr/bin/python3 /opt/pi-kiosk/sync_daemon.py --once
+# Controle batterie non bloquant (prefixe par '-' : echec tolere).
+ExecStartPre=-/opt/pi-kiosk/battery_monitor.sh -q
+
+# Raspberry Pi OS utilise chromium-browser, Debian chromium.
+# Invocation via sh -c + exec : resolution PATH cible, PID systemd correct.
+ExecStart=/bin/sh -c 'exec /usr/bin/chromium-browser --kiosk --noerrdialogs \
+    --disable-infobars --disable-session-crashed-bubble --incognito \
+    --autoplay-policy=no-user-gesture-required --start-fullscreen \
+    http://127.0.0.1:8080/'
+
+Restart=on-failure
+RestartSec=5
+
+# Durcissement.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

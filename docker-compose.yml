@@ -1,0 +1,61 @@
+name: pi-kiosk
+
+services:
+  kiosk-nginx:
+    image: nginx:1.27-alpine
+    container_name: pi-kiosk-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./content:/usr/share/nginx/html:ro
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://127.0.0.1/
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /run
+      - /tmp
+    networks:
+      - kiosk
+
+  kiosk-sync:
+    image: python:3.12-alpine
+    container_name: pi-kiosk-sync
+    restart: unless-stopped
+    depends_on:
+      kiosk-nginx:
+        condition: service_healthy
+    environment:
+      SYNC_BASE_URL: http://kiosk-nginx
+      SYNC_INTERVAL: "60"
+      CONTENT_DIR: /srv/content
+      STAGING_DIR: /srv/.staging
+      STATE_FILE: /srv/.sync-state.json
+      LOCK_FILE: /srv/.sync.lock
+    volumes:
+      - ./sync_daemon.py:/app/sync_daemon.py:ro
+      - ./content:/srv/content
+    working_dir: /app
+    command:
+      - python3
+      - /app/sync_daemon.py
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - kiosk
+
+networks:
+  kiosk:
+    name: pi-kiosk
+    driver: bridge
