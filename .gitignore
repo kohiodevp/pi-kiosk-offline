@@ -1,0 +1,26 @@
+# Secrets & environnement
+.env
+*.vault
+*.key
+*.pem
+
+# Logs & swap
+*.log
+*.swp
+*~
+*.tmp
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Docker
+*.pid
+
+# OS / Éditeurs
+.DS_Store
+.idea/
+.vscode/
